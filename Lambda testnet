@@ -120,3 +120,20 @@ sudo journalctl -u lambdavm -f
 
 Эксплорер блоков
 https://explorer.lambda.top/
+
+Дашборд\Валидаторы
+https://app.lambda.top/staking
+
+Снять Награды
+lambdavm tx distribution withdraw-rewards $(lambdavm keys show wallet --bech val -a) --commission --from "ИМЯ_КОШЕЛЬКА" --fees=10000ulamb --chain-id lambdatest_92001-1
+
+Делегировать своему валидатору
+lambdavm tx staking delegate "Адрес_Вашего_валидатора" 1000000000000000000ulamb --gas 300000 --chain-id lambdatest_92001-1 --from "ИМЯ_КОШЕЛЬКА" --fees=10000ulamb -y
+
+Выйти из тюрьмы
+lambdavm tx slashing unjail \
+  --broadcast-mode=block \
+  --from="ИМЯ_КОШЕЛЬКА" \
+  --chain-id=lambdatest_92001-1 \
+  --fees=10000ulamb \
+  --gas=300000
