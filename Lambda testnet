@@ -103,7 +103,7 @@ sudo journalctl -u lambdavm -f
 
 lambdavm tx staking create-validator \
   --amount=1000000000000000000ulamb \
-  --pubkey=$(./lambdavm tendermint show-validator) \
+  --pubkey=$(lambdavm tendermint show-validator) \
   --moniker="ИМЯ_ВАШЕЙ_НОДЫ" \
   --chain-id=lambdatest_92001-1 \
   --commission-rate="0.05" \
