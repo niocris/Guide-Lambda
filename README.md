@@ -1,0 +1,135 @@
+# Guide-Lambda2
+Прежде, чем приступать, необходимо подать заявку через форму https://docs.google.com/forms/d/e/1FAIpQLSf5hmriYnRgAa7zD3IuFcptuAMl-3xZM9L-z94yrqdZwXH8Cg/viewform
+После чего дождаться получения роли в дискорде и можно приступать.
+
+Минимальные требования
+Для запуска узлов валидации основной сети или тестовой сети вам потребуется машина со следующими минимальными аппаратными требованиями:
+
+4 или более физических ядер ЦП
+Не менее 500 ГБ дискового пространства SSD
+Не менее 32 ГБ памяти (ОЗУ)
+Пропускная способность сети не менее 100 Мбит/с
+По мере роста использования блокчейна требования к серверу также могут возрасти.
+
+
+1.⠀Обновим пакеты и систему
+
+sudo apt update && sudo apt upgrade -y
+
+sudo apt install git build-essential ufw curl jq snapd --yes
+
+2. Установка GO
+
+sudo snap install go --classic
+echo 'export GOPATH="$HOME/go"' >> ~/.profile
+echo 'export GOBIN="$GOPATH/bin"' >> ~/.profile
+echo 'export PATH="$GOBIN:$PATH"' >> ~/.profile
+source ~/.profile
+go version
+
+3. Установка бинарного файла ноды
+
+git clone https://github.com/LambdaIM/lambdavm.git
+cd lambdavm
+make install
+
+5. Сохраняем идентификатор цепочки
+
+lambdavm config chain-id lambdatest_92001-2
+
+6. Инициализируем узел
+
+lambdavm init <ВАШ_МОНИКЕР> --chain-id lambdatest_92001-2
+(<ВАШ_МОНИКЕР> необходимо заменить на придуманный вами)
+
+7. Скопируйте Genesis файл
+
+wget https://raw.githubusercontent.com/LambdaIM/testnets/main/lambdatest_92001-1/genesis.json
+mv genesis.json ~/.lambdavm/config/
+
+8. Добавляем Seed
+
+SEEDS=`curl -sL https://raw.githubusercontent.com/LambdaIM/testnets/main/lambdatest_92001-2/seeds.txt | awk '{print $1}' | paste -s -d, -`
+sed -i.bak -e "s/^seeds =.*/seeds = \"$SEEDS\"/" ~/.lambdavm/config/config.toml
+
+9. Добавляем Peer's
+
+PEERS=`curl -sL https://raw.githubusercontent.com/LambdaIM/testnets/main/lambdatest_92001-2/peers.txt | sort -R | head -n 10 | awk '{print $1}' | paste -s -d, -`
+sed -i.bak -e "s/^persistent_peers *=.*/persistent_peers = \"$PEERS\"/" ~/.lambdavm/config/config.toml
+
+10. Создаем кошелек 
+lambdavm keys add wallet
+(придумываем пароль и СОХРАНЯЕМ! мнемоническую фразу)
+
+11. Запрашиваем токены тестовой сети
+
+В дискорде находим канал faucet-testnet и вводим команду /faucet после чего, в отдельном окне вставляем наш кошелек.
+Через некоторое время токены поступят на бланс нашего кошелька.
+
+После синхронизации, можно будет узнать баланс введя команду:
+lambdavm q bank balances lamb.... 
+(нужно будет ввести адрес кошелька)
+
+12.⠀Создаем сервисный файл
+
+printf "[Unit]
+Description=lambda node
+After=network-online.target
+
+[Service]
+User=$USER
+ExecStart=`which lambdavm` start --x-crisis-skip-assert-invariants
+Restart=on-failure
+RestartSec=3
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target" > /etc/systemd/system/lambdavm.service
+
+13. Запускаем сервис
+
+sudo systemctl daemon-reload 
+sudo systemctl enable lambdavm 
+sudo systemctl restart lambdavm
+
+проверяем логи
+sudo journalctl -u lambdavm -f
+
+14. Создание валидатора
+
+lambdavm tx staking create-validator \
+  --amount=1000000000000000000ulamb \
+  --pubkey=$(lambdavm tendermint show-validator) \
+  --moniker="ИМЯ_ВАШЕЙ_НОДЫ" \
+  --chain-id=lambdatest_92001-2 \
+  --commission-rate="0.05" \
+  --commission-max-rate="0.20" \
+  --commission-max-change-rate="0.01" \
+  --min-self-delegation="1000000" \
+  --gas="300000" \
+  --gas-prices="0.025ulamb" \
+  --from=<ИМЯ_КОШЕЛЬКА>
+  --broadcast-mode block
+
+проверяем логи
+sudo journalctl -u lambdavm -f
+
+Эксплорер блоков
+https://explorer.lambda.top/
+
+Дашборд\Валидаторы
+https://app.lambda.top/staking
+
+Снять Награды
+lambdavm tx distribution withdraw-rewards $(lambdavm keys show wallet --bech val -a) --commission --from "ИМЯ_КОШЕЛЬКА" --fees=10000ulamb --chain-id lambdatest_92001-2
+
+Делегировать своему валидатору
+lambdavm tx staking delegate "Адрес_Вашего_валидатора" 1000000000000000000ulamb --gas 300000 --chain-id lambdatest_92001-2 --from "ИМЯ_КОШЕЛЬКА" --fees=10000ulamb -y
+
+Выйти из тюрьмы
+lambdavm tx slashing unjail \
+  --broadcast-mode=block \
+  --from="ИМЯ_КОШЕЛЬКА" \
+  --chain-id=lambdatest_92001-2 \
+  --fees=10000ulamb \
+  --gas=300000
