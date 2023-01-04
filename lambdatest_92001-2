@@ -18,7 +18,7 @@ sudo apt update && sudo apt upgrade -y
 
 sudo apt install git build-essential ufw curl jq snapd --yes
 
-2. Установка GO
+2. Установка GOland
 
 sudo snap install go --classic
 echo 'export GOPATH="$HOME/go"' >> ~/.profile
